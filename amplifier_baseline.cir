@@ -1,0 +1,60 @@
+* ECEN 326 Final Project - Optimized CMOS Two-Stage Diff Amp (8 Ohm Load)
+
+* Power Supply
+VDD vdd 0 5V
+
+* Signal Source (20mV peak at 10 kHz, 2.5V DC common-mode)
+VIN v_plus 0 DC 2.5 AC 1 SIN(2.5 0.02 10k)
+
+* Non-Inverting Closed-Loop Feedback: Av = 1 + (R2/R1) = 1 + (270k/10k) = 28 V/V
+R1 v_minus v_dc_block 10k
+C_DC v_dc_block 0 100u
+R2 v_out v_minus 270k
+
+* Stage 1: CD4007 Matched CMOS Pair & Active Load
+M1 v_d1 v_minus v_tail 0 CD4007_NMOS
+M2 v_stage1 v_plus v_tail 0 CD4007_NMOS
+M3 v_d1 v_d1 vdd vdd CD4007_PMOS
+M4 v_stage1 v_d1 vdd vdd CD4007_PMOS
+
+* Tail Current Source
+Itail v_tail 0 300u
+
+* Class-AB Bias Level Shifter
+V_AB v_stage1 v_gate_pmos DC -0.95
+
+* Stage 2: Power MOSFET Push-Pull Output Buffer (TO-220)
+M5 v_out v_gate_pmos vdd vdd FQP27P06
+M6 v_out v_stage1 0 0 IRLZ44N
+
+* Miller Frequency Compensation Capacitor
+CC v_stage1 v_out 1.2p
+
+* AC Coupled 8-Ohm Load
+C_OUT v_out v_load_ac 1000u
+RLOAD v_load_ac 0 8
+
+* --- DEVICE MODELS ---
+.model CD4007_NMOS NMOS(Level=1 VTO=1.5 KP=0.5m Gamma=0.4 Lambda=0.01)
+.model CD4007_PMOS PMOS(Level=1 VTO=-1.5 KP=0.5m Gamma=0.4 Lambda=0.02)
+.model IRLZ44N NMOS(Level=3 VTO=1.5 KP=40 CGSO=1700p)
+.model FQP27P06 PMOS(Level=3 VTO=-2.5 KP=20 CGSO=1400p)
+
+* --- SIMULATION & EXTRACTION COMMANDS ---
+.control
+op
+let ptot_mw = abs(v(vdd#branch)[0]) * 5.0 * 1000.0
+echo MEAS_POWER: "$&ptot_mw"
+
+ac dec 20 100 10MEG
+let mag_vout = mag(v(v_load_ac))
+meas ac gain10k find mag_vout at=10000
+meas ac max_gain max mag_vout
+meas ac f3db when mag_vout=0.7071*max_gain fall=1
+echo MEAS_GAIN: "$&max_gain"
+echo MEAS_F3DB: "$&f3db"
+
+tran 1u 1m
+fourier 10k v(v_load_ac)
+.endc
+.end

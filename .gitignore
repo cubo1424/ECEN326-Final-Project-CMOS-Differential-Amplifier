@@ -1,0 +1,20 @@
+Set-Content -Path .gitignore -Value @"
+# Secrets & Environments
+.env
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Simulation Runtime Logs
+output.log
+*.raw
+*.out
+
+# System / Editor
+.vscode/
+.idea/
+.DS_Store
+"@
